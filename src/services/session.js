@@ -1,10 +1,23 @@
 import { AUTH_CONFIG } from '../config/auth'
 import { APP_CONFIG, isMockMode } from '../config/app'
 
+function apiUrl(path) {
+  const base = APP_CONFIG.apiBaseUrl || ''
+  return `${base}${path}`
+}
+
+async function readJson(res) {
+  try {
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
 /**
  * Centralized auth/session service.
  * Default mode is "mock" to preserve current frontend-only behavior.
- * In api mode, requests go to the backend while mock remains available as fallback.
+ * In api mode, requests go to the backend and use an HttpOnly session cookie.
  */
 export async function signIn(role, username, password) {
   const expected = AUTH_CONFIG[role]
@@ -18,22 +31,15 @@ export async function signIn(role, username, password) {
     return ok ? { ok: true, role, mode: 'mock' } : { ok: false, reason: 'invalid_credentials' }
   }
 
-  const base = APP_CONFIG.apiBaseUrl
-  const url = `${base}/api/auth/login`
-
   try {
-    const res = await fetch(url, {
+    const res = await fetch(apiUrl('/api/auth/login'), {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ role, username: u, password: p }),
     })
 
-    let data = null
-    try {
-      data = await res.json()
-    } catch {
-      data = null
-    }
+    const data = await readJson(res)
 
     if (res.ok && data?.ok) {
       return data
@@ -57,5 +63,41 @@ export async function signIn(role, username, password) {
       reason: 'network_error',
       message: 'اتصال به سرور برقرار نشد. سرور بک‌اند را اجرا کنید یا به حالت mock برگردید.',
     }
+  }
+}
+
+export async function getSession() {
+  if (isMockMode) {
+    return { ok: false, reason: 'mock_mode' }
+  }
+
+  try {
+    const res = await fetch(apiUrl('/api/auth/me'), {
+      method: 'GET',
+      credentials: 'include',
+    })
+    const data = await readJson(res)
+    if (res.ok && data?.ok) return data
+    return { ok: false, reason: data?.reason || 'unauthorized' }
+  } catch {
+    return { ok: false, reason: 'network_error' }
+  }
+}
+
+export async function signOut() {
+  if (isMockMode) {
+    return { ok: true, mode: 'mock' }
+  }
+
+  try {
+    const res = await fetch(apiUrl('/api/auth/logout'), {
+      method: 'POST',
+      credentials: 'include',
+    })
+    const data = await readJson(res)
+    if (res.ok && data?.ok) return data
+    return { ok: false, reason: data?.reason || 'api_error' }
+  } catch {
+    return { ok: false, reason: 'network_error' }
   }
 }

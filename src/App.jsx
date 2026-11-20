@@ -14,6 +14,8 @@ import StudentPortal from './components/StudentPortal'
 import LoginPage from './components/LoginPage'
 import StaffAccess from './components/StaffAccess'
 import { SESSION_STORAGE_KEY } from './config/auth'
+import { isMockMode } from './config/app'
+import { getSession, signOut } from './services/session'
 
 const VIEW_HASH = {
   home: '#home',
@@ -64,9 +66,10 @@ function getInitialState() {
 function App() {
   const [initial] = useState(getInitialState)
   const [view, setViewState] = useState(initial.view)
-  const [studentAuthed, setStudentAuthed] = useState(initial.studentAuthed)
-  const [adminAuthed, setAdminAuthed] = useState(initial.adminAuthed)
-  const [teacherAuthed, setTeacherAuthed] = useState(initial.teacherAuthed)
+  const [studentAuthed, setStudentAuthed] = useState(isMockMode ? initial.studentAuthed : false)
+  const [adminAuthed, setAdminAuthed] = useState(isMockMode ? initial.adminAuthed : false)
+  const [teacherAuthed, setTeacherAuthed] = useState(isMockMode ? initial.teacherAuthed : false)
+  const [sessionChecked, setSessionChecked] = useState(isMockMode)
 
   const navigate = (nextView, { replace = false } = {}) => {
     setViewState(nextView)
@@ -95,6 +98,29 @@ function App() {
   }, [view])
 
   useEffect(() => {
+    if (!isMockMode) {
+      let cancelled = false
+      ;(async () => {
+        const result = await getSession()
+        if (cancelled) return
+        if (result?.ok) {
+          setStudentAuthed(result.role === 'student')
+          setAdminAuthed(result.role === 'admin')
+          setTeacherAuthed(result.role === 'teacher')
+        } else {
+          setStudentAuthed(false)
+          setAdminAuthed(false)
+          setTeacherAuthed(false)
+        }
+        setSessionChecked(true)
+      })()
+      return () => {
+        cancelled = true
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     try {
       sessionStorage.setItem(
         SESSION_STORAGE_KEY,
@@ -118,6 +144,9 @@ function App() {
     setStudentAuthed(false)
     setAdminAuthed(false)
     setTeacherAuthed(false)
+    if (!isMockMode) {
+      void signOut()
+    }
     navigate('home')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -127,6 +156,18 @@ function App() {
     setTeacherAuthed(false)
     navigate('staff-access')
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (!sessionChecked) {
+    return (
+      <div className="app">
+        <div className="login-page" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+          <div className="card" style={{ padding: '1.25rem 1.5rem', textAlign: 'center', color: 'var(--muted)' }}>
+            در حال بررسی نشست...
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (view === 'student-login') {
