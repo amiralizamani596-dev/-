@@ -464,7 +464,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
           label: 'نمره',
           placeholder: 'مثلاً ۱۸ یا 4.5',
           required: true,
-          initialValue: target.score === '—' ? '' : target.score,
+          initialValue: ['-', '—', ''].includes(String(target.score)) ? '' : String(target.score),
           validate: (value, allValues) => {
             const normalized = normalizeDigits(value)
             if (!/^\d{1,2}(\.\d{1,2})?$/.test(normalized)) return 'نمره باید عددی معتبر باشد.'
@@ -477,7 +477,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
       ],
       onConfirm: (values) => {
         setTeacherGrades((items) =>
-          items.map((g) => (g.id === id ? { ...g, score: values.score, outOf: Number(values.outOf) } : g)),
+          items.map((g) => (g.id === id ? { ...g, score: normalizeDigits(values.score).trim(), outOf: Number(values.outOf) } : g)),
         )
       },
     })
@@ -554,7 +554,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   }
 
   const teacherUnreadMessagesCount = teacherMessages.filter((m) => !m.read).length
-  const teacherPendingGradesCount = teacherGrades.filter((g) => g.score === '—' || g.score === '').length
+  const teacherPendingGradesCount = teacherGrades.filter((g) => ['-', '—', ''].includes(String(g.score ?? ''))).length
   const teacherActiveHomeworkCount = teacherHomework.filter((hw) => hw.status === 'active').length
   const attendanceSummary = teacherAttendance.reduce(
     (acc, s) => {
@@ -1434,7 +1434,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                               <td>{g.className}</td>
                               <td>{g.assessment}</td>
                               <td>{g.date}</td>
-                              <td><strong>{g.score}</strong>{g.score !== '—' ? ` / ${g.outOf || 20}` : ''}</td>
+                              <td><strong>{g.score}</strong>{!['-', '—', ''].includes(String(g.score ?? '')) ? ` / ${g.outOf || 20}` : ''}</td>
                               <td>
                                 <button type="button" className="btn btn-secondary" onClick={() => registerTeacherGrade(g.id)}>
                                   {g.score === '—' ? 'ثبت نمره' : 'ویرایش نمره'}
