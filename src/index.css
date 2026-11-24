@@ -194,3 +194,10 @@ ul { margin: 0; padding: 0; }
 @media (max-width: 900px) {
   .section { padding: 3.5rem 0; }
 }
+
+@media (max-width: 760px) {
+  .container { width: min(100% - 1.5rem, var(--container)); }
+  .section { padding: 2.75rem 0; }
+  .section-head h2 { font-size: 1.5rem; }
+  .btn { min-height: 44px; }
+}

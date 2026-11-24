@@ -43,19 +43,20 @@ export default function Navbar({ onStudentLogin, onStaffLogin }) {
         </button>
 
         <nav id="site-nav" className={`site-nav ${open ? 'open' : ''}`} aria-label="ناوبری اصلی">
-          {links.map((l) => (
-            <a key={l.href} href={l.href} onClick={(e) => go(e, l.href)}>{l.label}</a>
-          ))}
+          <div className="site-nav-links">
+            {links.map((l) => (
+              <a key={l.href} href={l.href} onClick={(e) => go(e, l.href)}>{l.label}</a>
+            ))}
+          </div>
+          <div className="nav-actions">
+            <button type="button" className="btn btn-secondary" onClick={() => { setOpen(false); onStaffLogin?.() }} title="انتخاب ورود مدیر یا دبیر" aria-label="ورود مدیر یا دبیر - انتخاب نقش و ورود">
+              ورود مدیر یا دبیر
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => { setOpen(false); onStudentLogin?.() }} title="باز کردن حساب کاربری دانش‌آموز" aria-label="ورود به حساب دانش‌آموز - باز کردن پنل دانش‌آموز">
+              ورود به حساب دانش‌آموز
+            </button>
+          </div>
         </nav>
-
-        <div className="nav-actions">
-          <button type="button" className="btn btn-secondary" onClick={() => { setOpen(false); onStaffLogin?.() }} title="انتخاب ورود مدیر یا دبیر" aria-label="ورود مدیر یا دبیر - انتخاب نقش و ورود">
-            ورود مدیر یا دبیر
-          </button>
-          <button type="button" className="btn btn-primary" onClick={() => { setOpen(false); onStudentLogin?.() }} title="باز کردن حساب کاربری دانش‌آموز" aria-label="ورود به حساب دانش‌آموز - باز کردن پنل دانش‌آموز">
-            ورود به حساب دانش‌آموز
-          </button>
-        </div>
       </div>
     </header>
   )

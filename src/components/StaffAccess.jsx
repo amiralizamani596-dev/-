@@ -1,4 +1,23 @@
+import { useEffect, useRef } from 'react'
+
 export default function StaffAccess({ onAdminSelect, onTeacherSelect, onBack }) {
+  const adminBtnRef = useRef(null)
+  const teacherBtnRef = useRef(null)
+
+  useEffect(() => {
+    adminBtnRef.current?.focus()
+  }, [])
+
+  const onOptionKeyDown = (e, current) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      const next = current === 'admin' ? teacherBtnRef.current : adminBtnRef.current
+      next?.focus()
+      return
+    }
+    // Enter/Space on focused button works natively; no extra handling needed.
+  }
+
   return (
     <div className="login-page">
       <a href="#staff-access-main" className="skip-link">پرش به انتخاب نوع ورود</a>
@@ -26,7 +45,7 @@ export default function StaffAccess({ onAdminSelect, onTeacherSelect, onBack }) 
             <p>نقش خود را انتخاب کنید تا وارد پنل مربوطه شوید. هر نقش دسترسی‌ها و امکانات اختصاصی خود را دارد.</p>
           </div>
 
-          <div className="staff-access-grid">
+          <div className="staff-access-grid" role="group" aria-label="انتخاب نقش ورود">
             <article className="card staff-access-card">
               <div className="staff-access-icon" aria-hidden="true">مد</div>
               <div className="staff-access-body">
@@ -39,7 +58,13 @@ export default function StaffAccess({ onAdminSelect, onTeacherSelect, onBack }) 
                   <li>ارسال اعلان و نظارت بر سامانه</li>
                 </ul>
               </div>
-              <button type="button" className="btn btn-primary staff-access-btn" onClick={onAdminSelect}>
+              <button
+                ref={adminBtnRef}
+                type="button"
+                className="btn btn-primary staff-access-btn"
+                onClick={onAdminSelect}
+                onKeyDown={(e) => onOptionKeyDown(e, 'admin')}
+              >
                 ادامه به عنوان مدیر
               </button>
             </article>
@@ -56,7 +81,13 @@ export default function StaffAccess({ onAdminSelect, onTeacherSelect, onBack }) 
                   <li>پیگیری کلاس‌ها و گزارش عملکرد</li>
                 </ul>
               </div>
-              <button type="button" className="btn btn-primary staff-access-btn" onClick={onTeacherSelect}>
+              <button
+                ref={teacherBtnRef}
+                type="button"
+                className="btn btn-primary staff-access-btn"
+                onClick={onTeacherSelect}
+                onKeyDown={(e) => onOptionKeyDown(e, 'teacher')}
+              >
                 ادامه به عنوان دبیر
               </button>
             </article>

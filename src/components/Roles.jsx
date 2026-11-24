@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 const roles = [
   {
@@ -33,7 +33,35 @@ const roles = [
 
 export default function Roles() {
   const [active, setActive] = useState(roles[0].id)
+  const tabRefs = useRef([])
   const current = roles.find((r) => r.id === active) || roles[0]
+  const activeIndex = Math.max(0, roles.findIndex((r) => r.id === active))
+
+  const activateByIndex = (index) => {
+    const next = roles[index]
+    if (!next) return
+    setActive(next.id)
+    tabRefs.current[index]?.focus()
+  }
+
+  const onTabKeyDown = (e, index) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      const dir = e.key === 'ArrowRight' ? 1 : -1
+      const nextIndex = (index + dir + roles.length) % roles.length
+      activateByIndex(nextIndex)
+      return
+    }
+    if (e.key === 'Home') {
+      e.preventDefault()
+      activateByIndex(0)
+      return
+    }
+    if (e.key === 'End') {
+      e.preventDefault()
+      activateByIndex(roles.length - 1)
+    }
+  }
 
   return (
     <section id="roles" className="section alt">
@@ -46,20 +74,25 @@ export default function Roles() {
 
         <div className="roles-wrap card">
           <div className="roles-tabs" role="tablist" aria-label="نقش‌های سامانه">
-            {roles.map((r) => (
+            {roles.map((r, i) => (
               <button
                 key={r.id}
+                ref={(el) => { tabRefs.current[i] = el }}
                 type="button"
                 role="tab"
+                id={`role-tab-${r.id}`}
+                aria-controls="role-panel"
                 aria-selected={active === r.id}
+                tabIndex={i === activeIndex ? 0 : -1}
                 className={`role-tab ${active === r.id ? 'active' : ''}`}
                 onClick={() => setActive(r.id)}
+                onKeyDown={(e) => onTabKeyDown(e, i)}
               >
                 {r.label}
               </button>
             ))}
           </div>
-          <div className="roles-panel" role="tabpanel">
+          <div id="role-panel" className="roles-panel" role="tabpanel" aria-labelledby={`role-tab-${active}`}>
             <div className="roles-info">
               <h3>{current.title}</h3>
               <p>{current.desc}</p>

@@ -38,10 +38,11 @@ export default function HeroSlider({ role, onNotify, onNavigate }) {
   )
 
   const [index, setIndex] = useState(0)
-
-  useEffect(() => {
+  const [prevRole, setPrevRole] = useState(role)
+  if (role !== prevRole) {
+    setPrevRole(role)
     setIndex(0)
-  }, [role])
+  }
 
   useEffect(() => {
     const timer = setInterval(() => {
