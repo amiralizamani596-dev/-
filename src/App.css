@@ -1285,6 +1285,7 @@
   }
   .portal-section-toolbar {
     justify-content: stretch;
+    flex-direction: column;
   }
   .portal-section-toolbar .btn,
   .portal-table-actions .btn {
@@ -1292,5 +1293,7 @@
   }
   .portal-table-actions {
     padding: .6rem .35rem .2rem;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
