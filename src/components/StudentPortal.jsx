@@ -946,6 +946,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
 
   return (
     <div className="portal">
+      <a href="#portal-main" className="skip-link">پرش به محتوای پنل</a>
       <header className="portal-header site-header">
         <div className="container nav-wrap">
           <button type="button" className="brand portal-brand" onClick={onBack} aria-label="بازگشت به صفحه اصلی">
