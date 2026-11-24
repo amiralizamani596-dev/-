@@ -295,6 +295,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const toastTimer = useRef(null)
   const modalRef = useRef(null)
   const lastFocusRef = useRef(null)
+  const panelRef = useRef(null)
+  const didMountSectionRef = useRef(false)
 
   const isAdmin = role === 'admin'
   const isTeacher = role === 'teacher'
@@ -934,6 +936,20 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   }, [role])
 
   useEffect(() => {
+    if (!didMountSectionRef.current) {
+      didMountSectionRef.current = true
+      return
+    }
+    const heading = panelRef.current?.querySelector('.section-title')
+    if (heading instanceof HTMLElement) {
+      heading.tabIndex = -1
+      heading.focus({ preventScroll: true })
+      const panel = panelRef.current
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [activeSection])
+
+  useEffect(() => {
     const welcomeMessage =
       role === 'admin'
         ? 'خوش آمدید، مدیر عزیز! به پنل مدیریت مدرسه وارد شدید.'
@@ -1050,7 +1066,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
               </div>
             </section>
 
-            <section id="panel" className="section alt portal-section">
+            <section id="panel" ref={panelRef} className="section alt portal-section">
               <div className="container portal-panel-grid">
                 <div className="card portal-panel-main">
                   <div className="section-head" style={{ marginBottom: '1rem' }}>
@@ -1152,8 +1168,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <div className="portal-mini-stat card"><span>ارسال شده</span><strong>{studentHomework.length - pendingHomeworkCount}</strong></div>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو در تکالیف (عنوان، درس، استاد)..." value={studentHomeworkQuery} onChange={(e) => setStudentHomeworkQuery(e.target.value)} />
-                <select className="portal-select" value={studentHomeworkFilter} onChange={(e) => setStudentHomeworkFilter(e.target.value)}>
+                <input className="portal-input" type="search" aria-label="جستجو در تکالیف" placeholder="جستجو در تکالیف (عنوان، درس، استاد)..." value={studentHomeworkQuery} onChange={(e) => setStudentHomeworkQuery(e.target.value)} />
+                <select className="portal-select" aria-label="فیلتر وضعیت تکالیف" value={studentHomeworkFilter} onChange={(e) => setStudentHomeworkFilter(e.target.value)}>
                   <option value="all">همه وضعیت‌ها</option>
                   <option value="pending">در انتظار ارسال</option>
                   <option value="submitted">ارسال شده</option>
@@ -1195,13 +1211,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این فیلتر پیدا نشد</strong>
                     <p>عبارت جستجو یا فیلتر وضعیت را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>تکلیفی ثبت نشده است</strong>
                   <p>در حال حاضر تکلیف فعالی برای نمایش وجود ندارد.</p>
                 </div>
@@ -1251,7 +1267,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                   </div>
                 </div>
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>نمره‌ای ثبت نشده است</strong>
                   <p>هنوز نمره یا ارزیابی ثبت‌شده‌ای برای نمایش وجود ندارد.</p>
                 </div>
@@ -1274,8 +1290,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <div className="portal-mini-stat card"><span>خوانده‌شده</span><strong>{studentMessages.length - unreadMessagesCount}</strong></div>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو در پیام‌ها..." value={studentMessagesQuery} onChange={(e) => setStudentMessagesQuery(e.target.value)} />
-                <select className="portal-select" value={studentMessagesFilter} onChange={(e) => setStudentMessagesFilter(e.target.value)}>
+                <input className="portal-input" type="search" aria-label="جستجو در پیام‌ها" placeholder="جستجو در پیام‌ها..." value={studentMessagesQuery} onChange={(e) => setStudentMessagesQuery(e.target.value)} />
+                <select className="portal-select" aria-label="فیلتر پیام‌ها" value={studentMessagesFilter} onChange={(e) => setStudentMessagesFilter(e.target.value)}>
                   <option value="all">همه پیام‌ها</option>
                   <option value="unread">خوانده‌نشده</option>
                   <option value="read">خوانده‌شده</option>
@@ -1306,13 +1322,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این فیلتر پیدا نشد</strong>
                     <p>عبارت جستجو یا فیلتر را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>پیام یا اعلانی وجود ندارد</strong>
                   <p>اعلان‌ها و پیام‌های جدید در این بخش نمایش داده می‌شوند.</p>
                 </div>
@@ -1371,7 +1387,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                   </div>
                 </div>
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>دانش‌آموزی برای ثبت حضور و غیاب وجود ندارد</strong>
                   <p>پس از انتخاب کلاس یا بارگذاری لیست، وضعیت حضور و غیاب اینجا نمایش داده می‌شود.</p>
                 </div>
@@ -1394,7 +1410,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <div className="portal-mini-stat card"><span>ثبت‌شده</span><strong>{teacherGrades.length - teacherPendingGradesCount}</strong></div>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو (دانش‌آموز، ارزیابی، کلاس)..." value={teacherGradesQuery} onChange={(e) => setTeacherGradesQuery(e.target.value)} />
+                <input className="portal-input" type="search" aria-label="جستجو در نمرات" placeholder="جستجو (دانش‌آموز، ارزیابی، کلاس)..." value={teacherGradesQuery} onChange={(e) => setTeacherGradesQuery(e.target.value)} />
               </div>
               {teacherGrades.length ? (
                 filteredTeacherGrades.length ? (
@@ -1431,13 +1447,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     </div>
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این جستجو پیدا نشد</strong>
                     <p>عبارت جستجو را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>رکورد نمره‌ای وجود ندارد</strong>
                   <p>هنوز موردی برای ثبت یا ویرایش نمره ثبت نشده است.</p>
                 </div>
@@ -1463,8 +1479,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <button type="button" className="btn btn-primary" onClick={addTeacherHomework}>افزودن تکلیف/محتوا</button>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو در تکالیف/محتوا..." value={teacherHomeworkQuery} onChange={(e) => setTeacherHomeworkQuery(e.target.value)} />
-                <select className="portal-select" value={teacherHomeworkFilter} onChange={(e) => setTeacherHomeworkFilter(e.target.value)}>
+                <input className="portal-input" type="search" aria-label="جستجو در تکالیف و محتوا" placeholder="جستجو در تکالیف/محتوا..." value={teacherHomeworkQuery} onChange={(e) => setTeacherHomeworkQuery(e.target.value)} />
+                <select className="portal-select" aria-label="فیلتر وضعیت تکالیف و محتوا" value={teacherHomeworkFilter} onChange={(e) => setTeacherHomeworkFilter(e.target.value)}>
                   <option value="all">همه وضعیت‌ها</option>
                   <option value="active">فعال</option>
                   <option value="review">در حال بررسی</option>
@@ -1502,13 +1518,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این فیلتر پیدا نشد</strong>
                     <p>عبارت جستجو یا فیلتر وضعیت را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>تکلیف یا محتوایی ثبت نشده است</strong>
                   <p>برای شروع، یک تکلیف یا محتوای آموزشی جدید اضافه کنید.</p>
                 </div>
@@ -1531,7 +1547,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <div className="portal-mini-stat card"><span>پاسخ‌داده/خوانده</span><strong>{teacherMessages.length - teacherUnreadMessagesCount}</strong></div>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو در پیام‌ها..." value={teacherMessagesQuery} onChange={(e) => setTeacherMessagesQuery(e.target.value)} />
+                <input className="portal-input" type="search" aria-label="جستجو در پیام‌های دبیر" placeholder="جستجو در پیام‌ها..." value={teacherMessagesQuery} onChange={(e) => setTeacherMessagesQuery(e.target.value)} />
               </div>
               {teacherMessages.length ? (
                 filteredTeacherMessages.length ? (
@@ -1554,13 +1570,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این جستجو پیدا نشد</strong>
                     <p>عبارت جستجو را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>پیامی برای نمایش وجود ندارد</strong>
                   <p>پیام‌ها و ارتباطات جدید در این بخش نمایش داده می‌شوند.</p>
                 </div>
@@ -1586,8 +1602,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <button type="button" className="btn btn-primary" onClick={addAdminStudent}>ثبت دانش‌آموز جدید</button>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو (نام، کلاس، تماس)..." value={adminStudentsQuery} onChange={(e) => setAdminStudentsQuery(e.target.value)} />
-                <select className="portal-select" value={adminStudentsFilter} onChange={(e) => setAdminStudentsFilter(e.target.value)}>
+                <input className="portal-input" type="search" aria-label="جستجو در دانش‌آموزان" placeholder="جستجو (نام، کلاس، تماس)..." value={adminStudentsQuery} onChange={(e) => setAdminStudentsQuery(e.target.value)} />
+                <select className="portal-select" aria-label="فیلتر وضعیت دانش‌آموزان" value={adminStudentsFilter} onChange={(e) => setAdminStudentsFilter(e.target.value)}>
                   <option value="all">همه وضعیت‌ها</option>
                   <option value="active">فعال</option>
                   <option value="leave">مرخصی</option>
@@ -1640,13 +1656,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     </div>
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این فیلتر پیدا نشد</strong>
                     <p>عبارت جستجو یا فیلتر وضعیت را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>هنوز دانش‌آموزی ثبت نشده است</strong>
                   <p>برای شروع، با دکمه «ثبت دانش‌آموز جدید» اطلاعات را وارد کنید.</p>
                 </div>
@@ -1672,7 +1688,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <button type="button" className="btn btn-primary" onClick={addAdminClass}>افزودن کلاس جدید</button>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو (نام کلاس، پایه، معلم)..." value={adminClassesQuery} onChange={(e) => setAdminClassesQuery(e.target.value)} />
+                <input className="portal-input" type="search" aria-label="جستجو در کلاس‌ها" placeholder="جستجو (نام کلاس، پایه، معلم)..." value={adminClassesQuery} onChange={(e) => setAdminClassesQuery(e.target.value)} />
               </div>
               {adminClasses.length ? (
                 filteredAdminClasses.length ? (
@@ -1701,13 +1717,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این جستجو پیدا نشد</strong>
                     <p>عبارت جستجو را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>هنوز کلاسی ثبت نشده است</strong>
                   <p>برای ایجاد کلاس جدید از دکمه «افزودن کلاس جدید» استفاده کنید.</p>
                 </div>
@@ -1733,8 +1749,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <button type="button" className="btn btn-primary" onClick={addAdminAnnouncement}>ایجاد اعلان جدید</button>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو در اعلان‌ها..." value={adminAnnouncementsQuery} onChange={(e) => setAdminAnnouncementsQuery(e.target.value)} />
-                <select className="portal-select" value={adminAnnouncementsFilter} onChange={(e) => setAdminAnnouncementsFilter(e.target.value)}>
+                <input className="portal-input" type="search" aria-label="جستجو در اعلان‌ها" placeholder="جستجو در اعلان‌ها..." value={adminAnnouncementsQuery} onChange={(e) => setAdminAnnouncementsQuery(e.target.value)} />
+                <select className="portal-select" aria-label="فیلتر وضعیت اعلان‌ها" value={adminAnnouncementsFilter} onChange={(e) => setAdminAnnouncementsFilter(e.target.value)}>
                   <option value="all">همه وضعیت‌ها</option>
                   <option value="sent">ارسال شده</option>
                   <option value="draft">پیش‌نویس</option>
@@ -1765,13 +1781,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این فیلتر پیدا نشد</strong>
                     <p>عبارت جستجو یا فیلتر وضعیت را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>اعلانی ثبت نشده است</strong>
                   <p>برای اطلاع‌رسانی، یک اعلان جدید ایجاد کنید.</p>
                 </div>
@@ -1794,8 +1810,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                 <div className="portal-mini-stat card"><span>در حال تهیه</span><strong>{adminReports.length - adminReadyReportsCount}</strong></div>
               </div>
               <div className="portal-toolbar">
-                <input className="portal-input" type="search" placeholder="جستجو در گزارش‌ها..." value={adminReportsQuery} onChange={(e) => setAdminReportsQuery(e.target.value)} />
-                <select className="portal-select" value={adminReportsFilter} onChange={(e) => setAdminReportsFilter(e.target.value)}>
+                <input className="portal-input" type="search" aria-label="جستجو در گزارش‌ها" placeholder="جستجو در گزارش‌ها..." value={adminReportsQuery} onChange={(e) => setAdminReportsQuery(e.target.value)} />
+                <select className="portal-select" aria-label="فیلتر وضعیت گزارش‌ها" value={adminReportsFilter} onChange={(e) => setAdminReportsFilter(e.target.value)}>
                   <option value="all">همه وضعیت‌ها</option>
                   <option value="ready">آماده</option>
                   <option value="in-progress">در حال تهیه</option>
@@ -1828,13 +1844,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="card portal-empty-state">
+                  <div className="card portal-empty-state" role="status">
                     <strong>موردی با این فیلتر پیدا نشد</strong>
                     <p>عبارت جستجو یا فیلتر وضعیت را تغییر دهید.</p>
                   </div>
                 )
               ) : (
-                <div className="card portal-empty-state">
+                <div className="card portal-empty-state" role="status">
                   <strong>گزارشی برای نمایش وجود ندارد</strong>
                   <p>پس از تهیه گزارش‌ها، در این بخش قابل مشاهده خواهند بود.</p>
                 </div>
@@ -1913,7 +1929,9 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
         </section>
       </main>
 
-      {toast && <div className="portal-toast" role="status" aria-live="polite">{toast}</div>}
+      <div className="portal-toast-region" role="status" aria-live="polite" aria-atomic="true">
+        {toast && <div className="portal-toast">{toast}</div>}
+      </div>
 
       {modal && (
         <div className="portal-modal-backdrop" onClick={closeModal} role="presentation">
@@ -1922,10 +1940,11 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
             className={`portal-modal ${modal.schedule ? 'portal-modal-schedule' : ''}`}
             role="dialog"
             aria-modal="true"
-            aria-label={modal.title}
+            aria-labelledby="portal-modal-title"
+            aria-describedby={modalError ? 'portal-modal-error' : undefined}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3>{modal.title}</h3>
+            <h3 id="portal-modal-title">{modal.title}</h3>
             {modal.desc && <p className="portal-modal-desc">{modal.desc}</p>}
             {modal.schedule && (
               <div className="portal-schedule-list" role="table" aria-label="برنامه هفتگی">
@@ -1957,11 +1976,15 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                         onChange={(e) => { setFormValues((v) => ({ ...v, [f.name]: e.target.value })); if (modalError) setModalError('') }}
                         placeholder={f.placeholder || f.label}
                         rows={f.rows || 4}
+                        aria-invalid={!!modalError}
+                        aria-describedby={modalError ? 'portal-modal-error' : undefined}
                       />
                     ) : f.type === 'select' ? (
                       <select
                         value={formValues[f.name] ?? ''}
                         onChange={(e) => { setFormValues((v) => ({ ...v, [f.name]: e.target.value })); if (modalError) setModalError('') }}
+                        aria-invalid={!!modalError}
+                        aria-describedby={modalError ? 'portal-modal-error' : undefined}
                       >
                         {(f.options || []).map((opt) => (
                           <option key={String(opt.value)} value={String(opt.value)}>
@@ -1975,6 +1998,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                         value={formValues[f.name] ?? ''}
                         onChange={(e) => { setFormValues((v) => ({ ...v, [f.name]: e.target.value })); if (modalError) setModalError('') }}
                         placeholder={f.placeholder || f.label}
+                        aria-invalid={!!modalError}
+                        aria-describedby={modalError ? 'portal-modal-error' : undefined}
                       />
                     )}
                   </label>
@@ -1988,10 +2013,12 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
                   value={inputValue}
                   onChange={(e) => { setInputValue(e.target.value); if (modalError) setModalError('') }}
                   placeholder={modal.field}
+                  aria-invalid={!!modalError}
+                  aria-describedby={modalError ? 'portal-modal-error' : undefined}
                 />
               </label>
             ) : null}
-            {modalError && <p className="portal-modal-error" role="alert">{modalError}</p>}
+            {modalError && <p id="portal-modal-error" className="portal-modal-error" role="alert">{modalError}</p>}
             <div className="portal-modal-actions">
               <button type="button" className="btn btn-primary" onClick={confirmModal} title={modal.actionTitle || modal.action}>{modal.action || 'تأیید'}</button>
               <button type="button" className="btn btn-secondary" onClick={closeModal} title={modal.cancelAction || 'انصراف'}>{modal.cancelAction || 'انصراف'}</button>

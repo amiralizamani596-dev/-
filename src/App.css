@@ -500,7 +500,8 @@
 .portal-contact-pill { color:#fff; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22); border-radius:14px; padding:.7rem .9rem; display:block; }
 .portal-contact-pill:hover { background:rgba(255,255,255,.22); }
 
-.portal-toast { position:fixed; left:1rem; bottom:1rem; z-index:120; background:#1e1b4b; color:#fff; padding:.85rem 1rem; border-radius:14px; box-shadow:0 12px 30px rgba(30,27,75,.25); max-width:min(420px, calc(100vw - 2rem)); font-weight:600; animation: toast-in .2s ease-out; }
+.portal-toast-region { position: fixed; left: 0; bottom: 0; width: 0; height: 0; overflow: visible; z-index: 120; pointer-events: none; }
+.portal-toast { position:fixed; left:1rem; bottom:1rem; z-index:120; background:#1e1b4b; color:#fff; padding:.85rem 1rem; border-radius:14px; box-shadow:0 12px 30px rgba(30,27,75,.25); max-width:min(420px, calc(100vw - 2rem)); font-weight:600; animation: toast-in .2s ease-out; pointer-events: auto; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .portal-modal-backdrop { position:fixed; inset:0; background:rgba(30,27,75,.45); display:grid; place-items:center; padding:1rem; z-index:110; animation: fade-in .15s ease-out; }
 .portal-modal { width:min(560px,100%); max-height:calc(100vh - 2rem); overflow:auto; background:#fff; border:1px solid var(--border); border-radius:20px; padding:1.25rem; box-shadow:var(--shadow); animation: modal-in .18s ease-out; }
