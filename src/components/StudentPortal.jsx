@@ -293,6 +293,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const [adminReportsQuery, setAdminReportsQuery] = useState('')
   const [adminReportsFilter, setAdminReportsFilter] = useState('all')
   const toastTimer = useRef(null)
+  const modalRef = useRef(null)
+  const lastFocusRef = useRef(null)
 
   const isAdmin = role === 'admin'
   const isTeacher = role === 'teacher'
@@ -824,6 +826,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
     const fields = getModalFields(item)
     const initial = {}
     fields.forEach((f) => { initial[f.name] = f.initialValue ?? '' })
+    lastFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setModal(item)
     setInputValue('')
     setFormValues(initial)
@@ -834,6 +837,9 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
     setInputValue('')
     setFormValues({})
     setModalError('')
+    window.setTimeout(() => {
+      lastFocusRef.current?.focus?.()
+    }, 0)
   }
   const confirmModal = () => {
     if (!modal) return
@@ -880,11 +886,44 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
     if (!modal) return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    const focusFirst = () => {
+      const root = modalRef.current
+      if (!root) return
+      const focusable = root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+      const first = Array.from(focusable).find((el) => !el.disabled && el.getAttribute('aria-hidden') !== 'true')
+      first?.focus?.()
+    }
+    const timer = window.setTimeout(focusFirst, 0)
+
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') closeModal()
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        closeModal()
+        return
+      }
+      if (e.key === 'Tab') {
+        const root = modalRef.current
+        if (!root) return
+        const focusable = Array.from(root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+          .filter((el) => !el.disabled && el.getAttribute('aria-hidden') !== 'true')
+        if (!focusable.length) {
+          e.preventDefault()
+          return
+        }
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => {
+      window.clearTimeout(timer)
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', onKeyDown)
     }
@@ -1878,6 +1917,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
       {modal && (
         <div className="portal-modal-backdrop" onClick={closeModal} role="presentation">
           <div
+            ref={modalRef}
             className={`portal-modal ${modal.schedule ? 'portal-modal-schedule' : ''}`}
             role="dialog"
             aria-modal="true"
