@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { isMockMode } from '../config/app'
+import { getPortalBootstrap, portalApi } from '../services/portal'
 
 const studentCards = [
   { title: 'برنامه هفتگی', desc: 'مشاهده کلاس‌ها، ساعات برگزاری و معلمان هر درس.', meta: '۴ کلاس امروز' },
@@ -292,6 +294,8 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const [adminAnnouncementsFilter, setAdminAnnouncementsFilter] = useState('all')
   const [adminReportsQuery, setAdminReportsQuery] = useState('')
   const [adminReportsFilter, setAdminReportsFilter] = useState('all')
+  const [portalLoading, setPortalLoading] = useState(!isMockMode)
+  const [portalApiError, setPortalApiError] = useState('')
   const toastTimer = useRef(null)
   const modalRef = useRef(null)
   const lastFocusRef = useRef(null)
@@ -366,11 +370,17 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
     if (target.status === 'submitted') return
     openModal({
       title: 'ثبت ارسال تکلیف',
-      desc: `آیا از ثبت ارسال تکلیف «${target.title}» مطمئن هستید؟\nپس از ثبت، وضعیت آن به «ارسال شده» تغییر می‌کند (نمونه).`,
+      desc: `آیا از ثبت ارسال تکلیف «${target.title}» مطمئن هستید؟\nپس از ثبت، وضعیت آن به «ارسال شده» تغییر می‌کند.`,
       action: 'تأیید و ارسال',
       cancelAction: 'انصراف',
-      done: 'تکلیف با موفقیت ارسال شد (نمونه).',
-      onConfirm: () => {
+      done: 'تکلیف با موفقیت ارسال شد.',
+      onConfirm: async () => {
+        if (!isMockMode) {
+          const res = await portalApi.student.submitHomework(id, {})
+          if (!res.ok) return { ok: false, message: res.message }
+          setStudentHomework((items) => items.map((hw) => (hw.id === id ? { ...hw, ...res.item } : hw)))
+          return
+        }
         setStudentHomework((items) =>
           items.map((hw) => (hw.id === id ? { ...hw, status: 'submitted' } : hw)),
         )
@@ -378,14 +388,17 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
     })
   }
 
-  const markMessageRead = (id) => {
-    setStudentMessages((items) =>
-      items.map((m) => (m.id === id ? { ...m, read: true } : m)),
-    )
+  const markMessageRead = async (id) => {
+    if (!isMockMode) {
+      const res = await portalApi.student.markMessageRead(id)
+      if (res.ok) setStudentMessages((items) => items.map((m) => (m.id === id ? { ...m, ...res.item } : m)))
+      return
+    }
+    setStudentMessages((items) => items.map((m) => (m.id === id ? { ...m, read: true } : m)))
   }
 
   const openMessage = (msg) => {
-    markMessageRead(msg.id)
+    void markMessageRead(msg.id)
     openModal({
       title: msg.title,
       desc: `${msg.from} • ${msg.date}\n\n${msg.body}`,
@@ -424,10 +437,17 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const saveAttendance = () => {
     openModal({
       title: 'ثبت نهایی حضور و غیاب',
-      desc: 'آیا از ثبت نهایی وضعیت حضور و غیاب این جلسه مطمئن هستید؟ (نمونه)',
+      desc: 'آیا از ثبت نهایی وضعیت حضور و غیاب این جلسه مطمئن هستید؟',
       action: 'ثبت نهایی',
       cancelAction: 'انصراف',
-      done: 'وضعیت حضور و غیاب جلسه با موفقیت ثبت شد (نمونه).',
+      done: 'وضعیت حضور و غیاب جلسه با موفقیت ثبت شد.',
+      onConfirm: async () => {
+        if (!isMockMode) {
+          const res = await portalApi.teacher.saveAttendance({ students: teacherAttendance })
+          if (!res.ok) return { ok: false, message: res.message }
+          if (Array.isArray(res.attendance?.students)) setTeacherAttendance(res.attendance.students)
+        }
+      },
     })
   }
 
@@ -475,9 +495,16 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
           },
         },
       ],
-      onConfirm: (values) => {
+      onConfirm: async (values) => {
+        const payload = { score: normalizeDigits(values.score).trim(), outOf: Number(values.outOf) }
+        if (!isMockMode) {
+          const res = await portalApi.teacher.updateGrade(id, payload)
+          if (!res.ok) return { ok: false, message: res.message }
+          setTeacherGrades((items) => items.map((g) => (g.id === id ? { ...g, ...res.item } : g)))
+          return
+        }
         setTeacherGrades((items) =>
-          items.map((g) => (g.id === id ? { ...g, score: normalizeDigits(values.score).trim(), outOf: Number(values.outOf) } : g)),
+          items.map((g) => (g.id === id ? { ...g, ...payload } : g)),
         )
       },
     })
@@ -492,24 +519,23 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const addTeacherHomework = () => {
     openModal({
       title: 'افزودن تکلیف/محتوا',
-      desc: 'اطلاعات تکلیف یا محتوای آموزشی جدید را وارد کنید (نمونه).',
+      desc: 'اطلاعات تکلیف یا محتوای آموزشی جدید را وارد کنید.',
       action: 'افزودن',
-      done: 'تکلیف/محتوای جدید با موفقیت اضافه شد (نمونه).',
+      done: 'تکلیف/محتوای جدید با موفقیت اضافه شد.',
       fields: [
         { name: 'title', label: 'عنوان تکلیف/محتوا', placeholder: 'مثلاً تمرین‌های فصل ۴', required: true },
         { name: 'className', label: 'کلاس', placeholder: 'مثلاً هشتم پویش', required: true, initialValue: 'هشتم پویش' },
         { name: 'due', label: 'موعد تحویل', placeholder: 'مثلاً ۱۴۰۵/۰۹/۱۰', required: true },
       ],
-      onConfirm: (values) => {
+      onConfirm: async (values) => {
+        if (!isMockMode) {
+          const res = await portalApi.teacher.addHomework(values)
+          if (!res.ok) return { ok: false, message: res.message }
+          setTeacherHomework((items) => [res.item, ...items])
+          return
+        }
         setTeacherHomework((items) => [
-          {
-            id: `th-${Date.now()}`,
-            title: values.title,
-            className: values.className,
-            due: values.due,
-            status: 'active',
-            submissions: '۰/۲۴',
-          },
+          { id: `th-${Date.now()}`, title: values.title, className: values.className, due: values.due, status: 'active', submissions: '۰/۲۴' },
           ...items,
         ])
       },
@@ -528,7 +554,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   }
 
   const openTeacherMessage = (msg) => {
-    setTeacherMessages((items) => items.map((m) => (m.id === msg.id ? { ...m, read: true } : m)))
+    if (!isMockMode) {
+      void portalApi.teacher.markMessageRead(msg.id).then((res) => {
+        if (res.ok) setTeacherMessages((items) => items.map((m) => (m.id === msg.id ? { ...m, ...res.item } : m)))
+      })
+    } else {
+      setTeacherMessages((items) => items.map((m) => (m.id === msg.id ? { ...m, read: true } : m)))
+    }
     openModal({
       title: msg.title,
       desc: `${msg.from} • ${msg.date}\n\n${msg.body}`,
@@ -547,8 +579,13 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
       fields: [
         { name: 'reply', label: 'متن پاسخ', placeholder: 'متن پاسخ خود را بنویسید...', type: 'textarea', required: true },
       ],
-      onConfirm: () => {
-        setTeacherMessages((items) => items.map((m) => (m.id === msg.id ? { ...m, read: true } : m)))
+      onConfirm: async () => {
+        if (!isMockMode) {
+          const res = await portalApi.teacher.markMessageRead(msg.id)
+          if (res.ok) setTeacherMessages((items) => items.map((m) => (m.id === msg.id ? { ...m, ...res.item } : m)))
+        } else {
+          setTeacherMessages((items) => items.map((m) => (m.id === msg.id ? { ...m, read: true } : m)))
+        }
       },
     })
   }
@@ -583,26 +620,22 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const addAdminStudent = () => {
     openModal({
       title: 'ثبت دانش‌آموز جدید',
-      desc: 'اطلاعات دانش‌آموز جدید را وارد کنید (نمونه).',
+      desc: 'اطلاعات دانش‌آموز جدید را وارد کنید.',
       action: 'ثبت دانش‌آموز',
-      done: 'دانش‌آموز جدید با موفقیت ثبت شد (نمونه).',
+      done: 'دانش‌آموز جدید با موفقیت ثبت شد.',
       fields: [
         { name: 'name', label: 'نام و نام خانوادگی', placeholder: 'مثلاً علی رضایی', required: true },
         { name: 'className', label: 'کلاس', placeholder: 'مثلاً هشتم پویش', required: true },
         { name: 'contact', label: 'شماره تماس', placeholder: 'مثلاً 09123456789', required: false },
       ],
-      onConfirm: (values) => {
-        setAdminStudents((items) => [
-          {
-            id: `st-${Date.now()}`,
-            name: values.name,
-            className: values.className,
-            average: '—',
-            status: 'active',
-            contact: values.contact || '—',
-          },
-          ...items,
-        ])
+      onConfirm: async (values) => {
+        if (!isMockMode) {
+          const res = await portalApi.admin.addStudent(values)
+          if (!res.ok) return { ok: false, message: res.message }
+          setAdminStudents((items) => [res.item, ...items])
+          return
+        }
+        setAdminStudents((items) => [{ id: `st-${Date.now()}`, name: values.name, className: values.className, average: '—', status: 'active', contact: values.contact || '—' }, ...items])
       },
     })
   }
@@ -610,15 +643,21 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const editAdminStudent = (student) => {
     openModal({
       title: 'ویرایش دانش‌آموز',
-      desc: `اطلاعات «${student.name}» را ویرایش کنید (نمونه).`,
+      desc: `اطلاعات «${student.name}» را ویرایش کنید.`,
       action: 'ذخیره تغییرات',
-      done: 'اطلاعات دانش‌آموز به‌روزرسانی شد (نمونه).',
+      done: 'اطلاعات دانش‌آموز به‌روزرسانی شد.',
       fields: [
         { name: 'name', label: 'نام و نام خانوادگی', placeholder: 'نام دانش‌آموز', required: true, initialValue: student.name },
         { name: 'className', label: 'کلاس', placeholder: 'نام کلاس', required: true, initialValue: student.className === 'بدون کلاس' ? '' : student.className },
         { name: 'contact', label: 'شماره تماس', placeholder: 'شماره تماس', required: false, initialValue: student.contact === '—' ? '' : student.contact },
       ],
-      onConfirm: (values) => {
+      onConfirm: async (values) => {
+        if (!isMockMode) {
+          const res = await portalApi.admin.updateStudent(student.id, { name: values.name, className: values.className, contact: values.contact || '—' })
+          if (!res.ok) return { ok: false, message: res.message }
+          setAdminStudents((items) => items.map((s) => (s.id === student.id ? { ...s, ...res.item } : s)))
+          return
+        }
         setAdminStudents((items) =>
           items.map((s) => (s.id === student.id ? { ...s, name: values.name, className: values.className, contact: values.contact || '—' } : s)),
         )
@@ -629,27 +668,22 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const addAdminClass = () => {
     openModal({
       title: 'افزودن کلاس جدید',
-      desc: 'اطلاعات کلاس جدید را وارد کنید (نمونه).',
+      desc: 'اطلاعات کلاس جدید را وارد کنید.',
       action: 'ایجاد کلاس',
-      done: 'کلاس جدید با موفقیت ایجاد شد (نمونه).',
+      done: 'کلاس جدید با موفقیت ایجاد شد.',
       fields: [
         { name: 'name', label: 'نام کلاس', placeholder: 'مثلاً هشتم شایستگی', required: true },
         { name: 'grade', label: 'پایه', placeholder: 'مثلاً پایه هشتم', required: true },
         { name: 'teacher', label: 'معلم مسئول', placeholder: 'مثلاً خانم کریمی', required: true },
       ],
-      onConfirm: (values) => {
-        setAdminClasses((items) => [
-          {
-            id: `cl-${Date.now()}`,
-            name: values.name,
-            grade: values.grade,
-            teacher: values.teacher,
-            students: 0,
-            schedule: 'برنامه‌ریزی نشده',
-            status: 'active',
-          },
-          ...items,
-        ])
+      onConfirm: async (values) => {
+        if (!isMockMode) {
+          const res = await portalApi.admin.addClass(values)
+          if (!res.ok) return { ok: false, message: res.message }
+          setAdminClasses((items) => [res.item, ...items])
+          return
+        }
+        setAdminClasses((items) => [{ id: `cl-${Date.now()}`, name: values.name, grade: values.grade, teacher: values.teacher, students: 0, schedule: 'برنامه‌ریزی نشده', status: 'active' }, ...items])
       },
     })
   }
@@ -657,15 +691,21 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const editAdminClass = (cls) => {
     openModal({
       title: 'ویرایش کلاس',
-      desc: `اطلاعات کلاس «${cls.name}» را ویرایش کنید (نمونه).`,
+      desc: `اطلاعات کلاس «${cls.name}» را ویرایش کنید.`,
       action: 'ذخیره تغییرات',
-      done: 'اطلاعات کلاس به‌روزرسانی شد (نمونه).',
+      done: 'اطلاعات کلاس به‌روزرسانی شد.',
       fields: [
         { name: 'name', label: 'نام کلاس', placeholder: 'نام کلاس', required: true, initialValue: cls.name },
         { name: 'grade', label: 'پایه', placeholder: 'پایه', required: true, initialValue: cls.grade === 'تعیین نشده' ? '' : cls.grade },
         { name: 'teacher', label: 'معلم مسئول', placeholder: 'معلم مسئول', required: true, initialValue: cls.teacher === 'تعیین نشده' ? '' : cls.teacher },
       ],
-      onConfirm: (values) => {
+      onConfirm: async (values) => {
+        if (!isMockMode) {
+          const res = await portalApi.admin.updateClass(cls.id, values)
+          if (!res.ok) return { ok: false, message: res.message }
+          setAdminClasses((items) => items.map((c) => (c.id === cls.id ? { ...c, ...res.item } : c)))
+          return
+        }
         setAdminClasses((items) =>
           items.map((c) => (c.id === cls.id ? { ...c, name: values.name, grade: values.grade, teacher: values.teacher } : c)),
         )
@@ -676,26 +716,22 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
   const addAdminAnnouncement = () => {
     openModal({
       title: 'ایجاد اعلان جدید',
-      desc: 'اعلان جدید را به‌صورت پیش‌نویس ایجاد کنید (نمونه).',
+      desc: 'اعلان جدید را به‌صورت پیش‌نویس ایجاد کنید.',
       action: 'ذخیره پیش‌نویس',
-      done: 'اعلان جدید به‌صورت پیش‌نویس ذخیره شد (نمونه).',
+      done: 'اعلان جدید به‌صورت پیش‌نویس ذخیره شد.',
       fields: [
         { name: 'title', label: 'عنوان اعلان', placeholder: 'مثلاً برگزاری جلسه اولیا', required: true },
         { name: 'audience', label: 'مخاطبان', placeholder: 'مثلاً همه دانش‌آموزان و اولیا', required: true },
         { name: 'body', label: 'متن اعلان', placeholder: 'متن اعلان را بنویسید...', type: 'textarea', required: true },
       ],
-      onConfirm: (values) => {
-        setAdminAnnouncements((items) => [
-          {
-            id: `an-${Date.now()}`,
-            title: values.title,
-            audience: values.audience,
-            date: '۱۴۰۵/۰۹/۰۱',
-            status: 'draft',
-            body: values.body,
-          },
-          ...items,
-        ])
+      onConfirm: async (values) => {
+        if (!isMockMode) {
+          const res = await portalApi.admin.addAnnouncement({ ...values, status: 'draft' })
+          if (!res.ok) return { ok: false, message: res.message }
+          setAdminAnnouncements((items) => [res.item, ...items])
+          return
+        }
+        setAdminAnnouncements((items) => [{ id: `an-${Date.now()}`, title: values.title, audience: values.audience, date: '۱۴۰۵/۰۹/۰۱', status: 'draft', body: values.body }, ...items])
       },
     })
   }
@@ -708,11 +744,15 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
       desc: `آیا از ارسال اعلان «${target.title}» برای مخاطبان (${target.audience}) مطمئن هستید؟`,
       action: 'ارسال اعلان',
       cancelAction: 'انصراف',
-      done: 'اعلان با موفقیت ارسال شد (نمونه).',
-      onConfirm: () => {
-        setAdminAnnouncements((items) =>
-          items.map((a) => (a.id === id ? { ...a, status: 'sent' } : a)),
-        )
+      done: 'اعلان با موفقیت ارسال شد.',
+      onConfirm: async () => {
+        if (!isMockMode) {
+          const res = await portalApi.admin.updateAnnouncement(id, { status: 'sent' })
+          if (!res.ok) return { ok: false, message: res.message }
+          setAdminAnnouncements((items) => items.map((a) => (a.id === id ? { ...a, ...res.item } : a)))
+          return
+        }
+        setAdminAnnouncements((items) => items.map((a) => (a.id === id ? { ...a, status: 'sent' } : a)))
       },
     })
   }
@@ -843,7 +883,7 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
       lastFocusRef.current?.focus?.()
     }, 0)
   }
-  const confirmModal = () => {
+  const confirmModal = async () => {
     if (!modal) return
     const fields = getModalFields(modal)
     let valuesForConfirm = null
@@ -878,7 +918,11 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
     }
 
     if (typeof modal.onConfirm === 'function') {
-      modal.onConfirm(valuesForConfirm)
+      const result = await modal.onConfirm(valuesForConfirm)
+      if (result?.ok === false) {
+        setModalError(result.message || 'عملیات انجام نشد.')
+        return
+      }
     }
     notify(modal.done || 'عملیات با موفقیت انجام شد.')
     closeModal()
@@ -930,6 +974,45 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
       window.removeEventListener('keydown', onKeyDown)
     }
   }, [modal])
+
+  useEffect(() => {
+    if (isMockMode) return
+    let cancelled = false
+    setPortalLoading(true)
+    setPortalApiError('')
+    getPortalBootstrap()
+      .then((res) => {
+        if (cancelled) return
+        if (!res.ok) {
+          setPortalApiError(res.message || 'بارگذاری اطلاعات پنل ناموفق بود.')
+          setPortalLoading(false)
+          return
+        }
+        const d = res.data || {}
+        if (res.role === 'student') {
+          if (Array.isArray(d.homework)) setStudentHomework(d.homework)
+          if (Array.isArray(d.grades)) setStudentGrades(d.grades)
+          if (Array.isArray(d.messages)) setStudentMessages(d.messages)
+        } else if (res.role === 'teacher') {
+          if (Array.isArray(d.attendance?.students)) setTeacherAttendance(d.attendance.students)
+          if (Array.isArray(d.grades)) setTeacherGrades(d.grades)
+          if (Array.isArray(d.homework)) setTeacherHomework(d.homework)
+          if (Array.isArray(d.messages)) setTeacherMessages(d.messages)
+        } else if (res.role === 'admin') {
+          if (Array.isArray(d.students)) setAdminStudents(d.students)
+          if (Array.isArray(d.classes)) setAdminClasses(d.classes)
+          if (Array.isArray(d.announcements)) setAdminAnnouncements(d.announcements)
+          if (Array.isArray(d.reports)) setAdminReports(d.reports)
+        }
+        setPortalLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setPortalApiError('بارگذاری اطلاعات پنل ناموفق بود.')
+        setPortalLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [role])
 
   useEffect(() => {
     setActiveSection('dashboard')
@@ -999,6 +1082,14 @@ export default function StudentPortal({ onBack, mode = 'student' }) {
             </div>
           </div>
         </nav>
+
+        {!isMockMode && (portalLoading || portalApiError) && (
+          <div className="container" style={{ marginTop: '1rem' }}>
+            <div className={`card ${portalApiError ? 'portal-empty-state' : ''}`} role="status" style={{ padding: '1rem 1.25rem' }}>
+              {portalLoading ? 'در حال بارگذاری اطلاعات پنل از سرور...' : portalApiError}
+            </div>
+          </div>
+        )}
 
         {activeSection === 'dashboard' && (
           <>
